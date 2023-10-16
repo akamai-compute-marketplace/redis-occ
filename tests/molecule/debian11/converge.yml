@@ -1,0 +1,13 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars_files:
+    - ../../vars.yml
+  tasks:
+    - name: inlcude common
+      include_role:
+        name: common
+    - name: include redis
+      include_role:
+        name: redis-sentinel

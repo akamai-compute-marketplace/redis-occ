@@ -1,0 +1,23 @@
+---
+# local test variables
+redis_password: re33Rdi11SSssP_pPaaS44_wd._
+instance_prefix: redis
+redis_version: 7.0.7 # do not update
+cluster_size: 3 # do not update
+redis_data:
+  results:
+    - redis1:
+      instance:
+        hostname: redis1
+        ip_pub1:
+        ip_priv1: 192.168.56.1
+    - redis2:
+      instance:
+        hostname: redis2
+        ip_pub1:
+        ip_priv1: 192.168.56.2
+    - redis3:
+      instance:
+        hostname: redis3
+        ip_pub1:
+        ip_priv1: 192.168.56.3
