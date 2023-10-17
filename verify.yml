@@ -1,0 +1,72 @@
+---
+- name: verify
+  hosts: all
+  gather_facts: false
+  user: root
+  vars_files:
+    - group_vars/redis-sentinel/vars
+    - group_vars/redis-sentinel/secret_vars    
+  tasks:
+    - name: getting redis info
+      community.general.redis_info:
+        login_host: localhost
+        login_password: "{{ redis_password }}"
+      register: redisinfo
+      run_once: true
+      delegate_to: "{{ groups['redis_primary'][0] }}"
+    
+    - name: verify connected secondaries
+      assert:
+        that: "{{ redisinfo.info.connected_slaves == (cluster_size - 1) }}"
+      run_once: true
+      delegate_to: localhost
+    
+    - name: inserting data into redis
+      community.general.redis_data:
+        login_host: localhost
+        login_password: "{{ redis_password }}"
+        key: replication
+        value: success
+        tls: false
+        state: present
+      run_once: true
+      delegate_to: "{{ groups['redis_primary'][0] }}"
+    
+    # add delay for replication events to occur
+    
+    - name: getting value of key
+      community.general.redis_data_info:
+        login_host: localhost
+        login_password: "{{ redis_password }}"
+        key: replication
+        tls: false
+      register: rediskey
+      until: rediskey is not failed
+      retries: 3
+      delay: 3
+      changed_when: "rediskey.value != 'success'"
+      failed_when: "rediskey.value != 'success'"
+      run_once: true
+      delegate_to: "{{ item }}"
+      loop: "{{ groups['redis_secondary'] }}"
+      tags: repl
+    
+    - name: ensuring key is present on the secondaries
+      assert:
+        that: "{{ rediskey.results[0].value == 'success' }}"
+      run_once: true
+      delegate_to: "{{ item }}"
+      loop: "{{ groups['redis_secondary'] }}"
+      tags: repl
+    
+    # clean up
+    
+    - name: cleaning up and removing test key
+      community.general.redis_data:
+        login_host: localhost
+        login_password: "{{ redis_password }}"
+        key: replication
+        tls: false
+        state: absent
+      run_once: true
+      delegate_to: "{{ groups['redis_primary'][0] }}"
